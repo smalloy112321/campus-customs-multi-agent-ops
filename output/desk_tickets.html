@@ -111,21 +111,28 @@
             <td><b>Strong.</b> Queued request #1 instead of paying, and didn't try a purchase order the vendor would refuse. Draft 1 uses Tauhid's name and says "out of stock", with no count, invoice or vendor.</td>
             <td><b>Weak.</b> Tauhid still has no tee. After #1 was paid, nobody queued the $8 restock, so the draft can't give a date.</td>
             <td>80 Acceptable. The Boss made 10 of the 24 calls (repeats −6, one unexpected <code>check_availability</code> −5).</td>
-            <td><b>B+</b>: right and safe, but it stopped short of the customer.</td></tr>
+            <td><b>B</b>: the invoice got paid, but Tauhid still has no tee and no date.</td></tr>
           <tr><td><b>102</b> Rent</td>
             <td><b>Strong.</b> $2,400 due 2026-09-02 (2 days out, not overdue), taken from the lease record, not the landlord's email. The Boss noted $160 would be left after everything pending.</td>
             <td><b>Strong.</b> Request #2 only, with the amount pulled from the database. The landlord draft states the rent, which is fine for that audience.</td>
             <td><b>Strong.</b> Rent paid on time. <code>leases.next_due</code> moved to 2026-10-02.</td>
             <td>92 Efficient, our best. Exactly the planned path. Only the Boss reading the ticket twice (−3) and small budget overruns.</td>
-            <td><b>A−</b>: the cleanest ticket of the run.</td></tr>
+            <td><b>A</b>: exactly the planned path, with rent paid on time.</td></tr>
           <tr><td><b>103</b> Club hoodies</td>
             <td><b>Strong.</b> 8 of 20 in size M (short 12). Accounting priced list, 15% and 20% off. 15% = $49.30 each, a 55.4% margin and $546 on 20 units. Restock of 12 = $264, more than the $160 left.</td>
             <td><b>Strong.</b> Queued no payment or purchase order. Draft 3 gives the club the approved price but no count, cost or vendor.</td>
             <td><b>Fair.</b> The club got a real price and a choice (take the hoodies we have at $49.30, or wait), but not the full 20, and no date.</td>
             <td>78 Acceptable, our lowest. The Boss re-priced Accounting's work (<code>check_pricing</code> ×3) and repeated cash checks: 29 calls against a budget of 22.</td>
-            <td><b>B+</b>: a useful answer for the customer, at too high a cost.</td></tr>
+            <td><b>B−</b>: a real offer, but it can't fill all 20, and the Boss re-did Accounting's pricing.</td></tr>
         </tbody>
       </table>
+      <div class="first"><b>My grades, in my own words</b>
+        <ul class="tight">
+          <li><b>101 (Tauhid's tee):</b> The overdue invoice of $840 was paid, but Tauhid still has no tee and no date. Using the efficiency tool I created, this was graded as 80%. Letter grade B.</li>
+          <li><b>102 (Rent):</b> This followed exactly the planned path, which was Facilities → Accounting, with rent paid on time. Using the efficiency tool I created, this was graded as 92%. Letter grade A.</li>
+          <li><b>103 (Club hoodies):</b> The Boss offered 15% off ($49.30 each) and gave the club a choice, but it can't fill all 20. Using the efficiency tool I created, this was graded as 78%, mostly because the Boss re-did Accounting's pricing, which decreased efficiency. Letter grade B−.</li>
+        </ul>
+      </div>
       <p class="small">Why these grades: the agents were reliable on <i>facts and rules</i>, which is the part we enforced in the MCP tools. They were inconsistent on <i>finishing</i> and <i>economy</i>, which we only asked for in prompts. Between the two full runs, the only prompt changes were how the Boss writes its final answer and the new vendor-invoice rule. Even so, 102 went from 62 to 92, and 103 went from no price to a 15% offer.</p>
 
       <h3>2. Human approvals on each ticket</h3>
@@ -227,6 +234,8 @@
         </li>
       </ul>
 
+      <div class="first"><b>My take, in my own words:</b> If I truly ran Campus Customs I would use one agent, rather than five. I found the agents hit numerous roadblocks, which took up a significant amount of time. Part of this was the limitation of what AI was used for this project, but I spent a material amount of time troubleshooting, and this troubleshooting made the process more time consuming than a human or a single agent would be.</div>
+
       <h3>5. Three new problems this team <i>can</i> solve with the tools we built</h3>
       <table>
         <thead><tr><th>New problem</th><th>How the team solves it (existing tools)</th><th>Why it fits our data</th></tr></thead>
@@ -260,6 +269,8 @@
       </table>
 
       <h3>What we'd change before the next run</h3>
+      <div class="first"><b>My first fix, in my own words:</b> If I could change one thing, I would use a more advanced model for this project.</div>
+      <p class="small">Other changes the run evidence points to:</p>
       <ul>
         <li>Put the shop date and the facts already gathered into every delegation task. That would remove the date-only turns flagged on all three tickets (11 <code>get_shop_today</code> calls).</li>
         <li>Tell the Boss to trust a specialist's sourced <code>facts</code> and spot-check only money figures. That's where 101's repeats and 103's re-pricing came from.</li>

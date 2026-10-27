@@ -137,12 +137,25 @@ This is a log of the prompts I typed into the vibe coder. It has one section for
 >
 > Update mcp_server/README.md so that the tool list matches what we have now.
 
+**In my own words:** I was hoping that this five-agent team would be able to make decisions that did not need escalating in order to be more efficient. However, I found that the time the agents took to speak to one another significantly cut into that efficiency.
+
 **Follow-up prompt:**
 > Do a live test run on ticket 101 only, so we can check the agents and the audit trail, then reset the database.
 
 **What was lacking:** The first prompt built the team, but nothing had run the agents live yet, so I couldn't see them delegate or confirm the audit trail actually recorded each step.
 
 **Result:** The Boss delegated to Inventory, then Accounting, then Customer Service. Accounting queued a payment request for invoice 501 ($840), which is waiting for human approval; nothing was paid. Customer Service saved a draft to Tauhid saying the tee is out of stock, with no counts or finances. The Boss set ticket 101 to `waiting_approval`. The audit trail recorded 53 steps, all from gpt-6-luna, and the database was reset afterwards.
+
+**Later follow-up (own words in the agent prompts):** the AI asked what I'd tell a new hire on day one for each agent, and I answered:
+- **Boss:** A good shift lead works efficiently in responding to the escalations that need human intervention. The one mistake I'd never forgive would be not responding or approving in a timely manner.
+- **Inventory:** Size matters as much as SKU because broken size runs are not helpful for customers. When a vendor is blocked, say why explicitly and clearly.
+- **Accounting:** Accounting should be extremely careful, and any outgoing funds need human approval as the final stage before payment. A log should also be kept and shared with the Boss weekly of all outgoing funds, summed up.
+- **Facilities:** The lease should be used as the source of truth, given it is a signed document. Facilities should be calm but firm over rent. Escalations to the Boss should begin if a landlord's email contradicts the lease or if rent is overdue.
+- **Customer Service:** Campus Customs should sound like a human and not a robot. There should be no cursing or over-familiarity. Do not invent information. Do not give out any details about other customers.
+
+**What was lacking:** The five agent prompts were detailed but written by the AI, while the assignment asks for each prompt in my own words.
+
+**Result:** Each prompt now opens with a "From the owner (Samantha, in my own words)" note containing my answer, and the rest of each prompt is unchanged. These notes were added after the final full run, so that run used the prompts without them; no rule or tool changed.
 
 **Later fix** (from the Problem 11 grading follow-up): the safety section only capped requests and delegations. I added explicit token limits (150k tokens per ticket, 20k input per request), sized at about twice the largest real run, and a "Token limits" table in `harness.md`. A 4k per-response output cap was also tried, then removed and replaced by a 180-second request deadline (see Problem 11).
 
@@ -240,6 +253,8 @@ This is a log of the prompts I typed into the vibe coder. It has one section for
 >
 > Write output/design.md with what we've chosen for the dashboard look, including the changes we're about to make - we should include what changes we made, why we made the changes to make the site as user friendly and enjoyable as possible
 
+**In my own words:** When a manager opens the board, they should be able to very simply and effectively approve of the problems that require human approvals and/or interventions.
+
 **Follow-up prompts (approval check):**
 > I approved the $840 on ticket 101 from the board. Check that the balance dropped and 101 resolved, then I'll give design feedback.
 
@@ -278,6 +293,8 @@ This is a log of the prompts I typed into the vibe coder. It has one section for
 >
 > Append real runs to output/audit_trail.json. Finish output/harness.md so that it covers tables, MCP tools, the five agents, API routes, the dashboard, and all of the safety rules.
 
+**In my own words:** This run was the real test of the whole system end to end. We reset the shop to its starting state ($3,400 in checking, three open tickets), ran all three tickets on the board, and approved the payments as the human. The run needed to show that the agents could actually resolve three problems, that money moved only with my approval, that the math was correct, and that every step was recorded in the audit trail. Its results are the evidence for most of the deliverables.
+
 **Follow-up prompt:**
 > I approve payment request 1 ($840 to Bulldog Print Co, invoice 501, ticket 101) and payment request 2 ($2,400 rent to Elm City Properties, lease 1, ticket 102). Send both approve calls for me with approved_by "Samantha Malloy", request 1 first, then finish Problem 9.
 
@@ -304,6 +321,13 @@ This is a log of the prompts I typed into the vibe coder. It has one section for
 > Fix all the gaps you listed: smoke evidence vs the committed working DB, the Reflection's missing performance-evaluation and approvals parts, explicit token limits, the design.md and AI_prompts placeholders, and the 'what was lacking' sentences. Then commit and push.
 
 **What was lacking:** My first prompt left out the assignment's first question (how I'd evaluate the agents' performance on each ticket and why), and the reflection didn't spell out the human approvals on each ticket. The follow-up added Reflection sections 1 (performance evaluation, graded on facts, safety, outcome and efficiency) and 2 (human approvals per ticket).
+
+**Follow-up (own words in the Reflection):** after the final run, the AI asked me three questions, and my answers went into the Reflection as written:
+- my letter grade and reason for each ticket (101 B, 102 A, 103 B−);
+- one agent or five: "If I truly ran Campus Customs I would use one agent, rather than five…";
+- my first fix: "I would use a more advanced model for this project."
+
+**What was lacking:** The Reflection's grades and opinions were the AI's, while the assignment says to answer in my own vibe.
 
 **Result of the first prompt:** the reflection cites run evidence from the ticket and Cash tabs:
 - 101 matched the plan, but the Boss repeated its own calls.
