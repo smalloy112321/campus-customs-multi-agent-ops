@@ -269,3 +269,22 @@ This is a log of the prompts I typed into the vibe coder. It has one section for
 It names three solvable problems (the $8 tee restock, Crest Mugs from Elm City Gifts, a 30-cap order) and three unsolvable ones (rent of $2,400 due 2026-10-02 against $160 with no money coming in, receiving restocks while the shop date is frozen, and having no discount policy), each with the new tools or agents needed.
 
 ---
+
+## Problem 11: Publish to GitHub
+
+**Prompt:**
+> Last problem, Problem Number 11. We are going to push the code to a public GitHub repository so that my graders can clone it and I am going to submit the repo URL to Canvas and also put it in output/github_url.txt.
+>
+> Do NOT push the real .env to the GitHub repo. Do include both database files under data/ (the original and the working copy) so that the graders can run the app easily.
+>
+> README should explain: copy original DB to the working copy when you need a clean run, start MCP server, start FastAPI backend, start the React board, reset the DB before a full three-ticket run.
+
+**Follow-up:** None needed. Before pushing, the AI:
+- scanned every file for the real Portkey key (0 hits);
+- made `.mcp.json` use project-relative paths;
+- wrote the README with the run steps and the full file tree;
+- tested the README steps on a fresh clone: setup, DB copy, MCP smoke test, backend routes, and board build.
+
+Repo: https://github.com/smalloy112321/campus-customs-multi-agent-ops (public, both `.db` files included, no `.env`).
+
+---
