@@ -9,6 +9,7 @@ import os
 from pathlib import Path
 
 from dotenv import load_dotenv
+from pydantic_ai.models.fallback import FallbackModel
 from pydantic_ai.models.openai import OpenAIResponsesModel
 from pydantic_ai.providers.openai import OpenAIProvider
 
@@ -28,11 +29,12 @@ KEY_PLACEHOLDER = "your-portkey-api-key-here"  # the value shipped in .env.examp
 # A per-response output cap (max_tokens 4k) was tried and removed: in test reruns after the
 # Problem 9 run, the Boss's final structured answer used the whole 4k on hidden reasoning and the
 # run stopped with an error. Token limits are only checked after a response returns, so a stuck
-# request gets a hard deadline instead (REQUEST_TIMEOUT_SECONDS).
+# request gets a hard deadline instead, and is retried on the same model (MODEL_ATTEMPTS).
 REQUEST_LIMIT_PER_TICKET = 60            # model requests across one ticket's whole delegation tree
 TOTAL_TOKENS_PER_TICKET = 150_000        # input + output tokens across that tree
 INPUT_TOKENS_PER_REQUEST = 20_000        # one model request's prompt + history
-REQUEST_TIMEOUT_SECONDS = 180            # deadline for one model request (all retries included)
+REQUEST_TIMEOUT_SECONDS = 90             # deadline for one attempt at one model request
+MODEL_ATTEMPTS = 3                       # a timed-out or failed request is retried on gpt-6-luna
 
 os.environ.setdefault("PYDANTIC_AI_NO_BANNER", "1")
 
@@ -45,16 +47,22 @@ def load_env() -> None:
             return
 
 
-def make_model() -> OpenAIResponsesModel:
-    """gpt-6-luna through Portkey (Responses API, needed for tools + structured output)."""
+def _luna(api_key: str) -> OpenAIResponsesModel:
+    return OpenAIResponsesModel(MODEL_NAME, provider=OpenAIProvider(api_key=api_key, base_url=PORTKEY_BASE_URL))
+
+
+def make_model() -> FallbackModel:
+    """gpt-6-luna through Portkey (Responses API, needed for tools + structured output).
+
+    Wrapped so a request that times out or errors is retried, up to MODEL_ATTEMPTS times in
+    total. Every attempt is gpt-6-luna; no other model is ever involved.
+    """
     load_env()
     api_key = os.getenv("PORTKEY_API_KEY")
     if not api_key or api_key == KEY_PLACEHOLDER:
         raise RuntimeError("PORTKEY_API_KEY is not set. Copy .env.example to .env and add your Portkey key.")
-    return OpenAIResponsesModel(
-        MODEL_NAME,
-        provider=OpenAIProvider(api_key=api_key, base_url=PORTKEY_BASE_URL),
-    )
+    attempts = [_luna(api_key) for _ in range(MODEL_ATTEMPTS)]
+    return FallbackModel(attempts[0], *attempts[1:])
 
 
 def load_mcp_config() -> dict:

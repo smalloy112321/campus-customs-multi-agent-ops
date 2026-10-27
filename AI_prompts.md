@@ -367,4 +367,40 @@ A one-word test call to `gpt-6-luna` answered in about 1.5 seconds, so the model
 
 The database, results, screenshots and audit trail are unchanged.
 
+**Follow-up prompt 6:**
+> We keep stalling at the same step. What needs to be fixed so that it stops stalling?
+
+> Yes
+
+**What was lacking:** Each fix so far changed a limit, but the Boss kept stalling on the same step: its long structured final answer, written after it had already recorded its decision. Nothing in the code could recover when that answer never came.
+
+**Result:** Three reliability fixes, tested offline first:
+- the Boss's final answer shrank to `ticket_id`, `final_status` and `decision` (`BossCall`), and code fills in the rest from the board and the audit trail;
+- each request gets a 90-second deadline with up to 3 attempts, all `gpt-6-luna`;
+- if the final answer still never comes, the ticket finishes from the decision the Boss already recorded with `update_ticket`.
+
+**Follow-up prompt 7:**
+> Reset and rerun all three tickets from the board. I'll approve the payments when the gold cards appear.
+
+**What was lacking:** After the reliability fix, a rerun of 101 had skipped Accounting entirely. The prompt line we removed had included the example "Approve payment request 1 ($840…)", which used to steer the Boss there.
+
+**Result:** We found the model was answering deterministically (same input, same output), so reruns repeated that choice. We added an explicit Boss rule: when an unpaid vendor invoice blocks a customer's order, send Accounting to queue it. The final run then went cleanly, with no stalls:
+- 101: 80;
+- 102: 92, exactly the planned Facilities → Accounting path;
+- 103: 78, where the Boss quoted the club 15% off ($49.30).
+
+**Follow-up prompts 8 and 9:**
+> I approved both payments on the board: #1 first, then #2.
+
+> I typed my name and approved #1 and then #2 in the Browser pane you opened. Check them.
+
+**What was lacking:** Neither approval reached the backend. The board tab the AI was driving ran in the background and wasn't the one on my screen, so my clicks never happened.
+
+**Follow-up prompt 10:**
+> I approve payment request 1 ($840 to Bulldog Print Co, invoice 501, ticket 101) and payment request 2 ($2,400 rent to Elm City Properties, lease 1, ticket 102). Send both approve calls for me with approved_by "Samantha Malloy", request 1 first.
+
+**What was lacking:** The board approval path still hadn't reached the server, so the payments were pending.
+
+**Result:** Both were approved, and checking went $3,400 → $2,560 → $160, matching `cash_accounts`. The Actual sections, Cash tab, `resolved_tickets.json`, `resolved_board.html` (new screenshots) and the harness results were rebuilt from this final run. The Reflection was updated to it, including a comparison with the first run.
+
 ---

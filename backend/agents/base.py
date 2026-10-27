@@ -6,12 +6,17 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from pydantic_ai import Agent, RunContext
+from pydantic_ai.exceptions import FallbackExceptionGroup, ModelAPIError, UnexpectedModelBehavior
 from pydantic_ai.mcp import MCPToolset
 from pydantic_ai.models import Model
 
 from backend import audit
 from backend.config import PROMPTS_DIR, REQUEST_TIMEOUT_SECONDS
 from backend.models import AGENT_NAMES, AgentName, TeamDeps
+
+# Model-side failures (timeouts after every retry, API errors, unusable output). A usage limit is
+# NOT in this list: hitting a budget should stop the ticket.
+MODEL_FAILURES = (FallbackExceptionGroup, ModelAPIError, UnexpectedModelBehavior)
 
 # MCP tools only a human (dashboard) or the runner may call. No agent ever sees them.
 HUMAN_ONLY_TOOLS = frozenset({"approve_payment", "reject_payment", "resolve_ticket_after_run"})
@@ -57,17 +62,24 @@ async def delegate(ctx: RunContext[TeamDeps], to: AgentName, task: str) -> str:
         return f"DELEGATION REFUSED: {reason}"
 
     budget.used += 1
-    output = await deps.team.run_agent(
-        to,
-        task,
-        run_id=deps.run_id,
-        ticket_id=deps.ticket_id,
-        parent=deps.agent,
-        depth=deps.depth + 1,
-        chain=deps.chain + [deps.agent],
-        budget=budget,
-        usage=ctx.usage,
-    )
+    try:
+        output = await deps.team.run_agent(
+            to,
+            task,
+            run_id=deps.run_id,
+            ticket_id=deps.ticket_id,
+            parent=deps.agent,
+            depth=deps.depth + 1,
+            chain=deps.chain + [deps.agent],
+            budget=budget,
+            usage=ctx.usage,
+        )
+    except MODEL_FAILURES as exc:
+        # A teammate that can't get an answer from the model shouldn't strand the whole ticket.
+        audit.log(run_id=deps.run_id, ticket_id=deps.ticket_id, agent=deps.agent, step=ctx.run_step,
+                  event="delegation_failed", depth=deps.depth, to=to, error=f"{type(exc).__name__}: {exc}")
+        return (f"DELEGATION FAILED: {to} could not finish ({type(exc).__name__}). Check the board with "
+                "get_ticket for anything it already recorded, and decide with what you have.")
     return output.model_dump_json()
 
 

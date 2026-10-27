@@ -8,6 +8,7 @@ step of each agent loop is appended to output/audit_trail.json as it happens.
 from __future__ import annotations
 
 import uuid
+from datetime import datetime
 from typing import Any
 
 from fastmcp import Client
@@ -18,7 +19,7 @@ from pydantic_core import to_jsonable_python
 
 from backend import audit
 from backend.agents import SPECS
-from backend.agents.base import build_agent
+from backend.agents.base import MODEL_FAILURES, build_agent
 from backend.config import (
     INPUT_TOKENS_PER_REQUEST,
     MODEL_NAME,
@@ -28,7 +29,7 @@ from backend.config import (
     load_mcp_config,
     make_model,
 )
-from backend.models import AgentName, BossDecision, DelegationBudget, TeamDeps
+from backend.models import AgentName, BossCall, BossDecision, DelegationBudget, TeamDeps
 
 # One budget per ticket: usage is shared across the whole delegation tree, so these caps
 # apply to the ticket, not to each agent.
@@ -160,13 +161,79 @@ class Team:
         task = (
             f"Work ticket {ticket_id}. Read it with get_ticket, delegate to the specialists it "
             "needs, verify their facts, record your decision with update_ticket, and return "
-            "your BossDecision."
+            "your final call (ticket_id, final_status, decision)."
         )
         run_id = f"ticket-{ticket_id}-{uuid.uuid4().hex[:8]}"
-        decision = await self.run_agent("boss", task, run_id=run_id, ticket_id=ticket_id)
+        started = datetime.now().astimezone()
+        try:
+            call: BossCall = await self.run_agent("boss", task, run_id=run_id, ticket_id=ticket_id)
+            recovered = False
+        except MODEL_FAILURES as exc:
+            call = await self._recover_from_board(ticket_id, run_id, started, exc)
+            recovered = True
+
+        decision = await self._full_decision(call, run_id, recovered)
+        audit.log(run_id=run_id, ticket_id=ticket_id, agent="system", step=0, event="boss_decision",
+                  decision=_json(decision))
         # The run is over: resolve the ticket unless a payment is still waiting on a human.
         closed = await self.call_tool("resolve_ticket_after_run", {"ticket_id": ticket_id,
                                                                   "note": f"Boss: {decision.decision}"})
         audit.log(run_id=run_id, ticket_id=ticket_id, agent="system", step=0, event="ticket_closed"
                   if closed.get("resolved") else "awaiting_human", result=closed)
         return decision
+
+    # -- Reliability: finish the ticket from the board if the Boss's last answer never comes ------
+
+    async def _boss_updates_since(self, ticket_id: int, started: datetime) -> tuple[dict, list[dict]]:
+        board = await self.call_tool("get_ticket", {"ticket_id": ticket_id})
+        mine = [u for u in board.get("ticket_updates", [])
+                if u["agent"] == "boss" and datetime.fromisoformat(u["created_at"]) >= started.replace(microsecond=0)]
+        return board, mine
+
+    async def _recover_from_board(self, ticket_id: int, run_id: str, started: datetime, exc: Exception) -> BossCall:
+        """The Boss failed after every retry. If it had already recorded its decision with
+        update_ticket in this run, take the call from there; otherwise the run really failed."""
+        board, updates = await self._boss_updates_since(ticket_id, started)
+        if not updates:
+            raise exc
+        last = updates[-1]
+        call = BossCall(ticket_id=ticket_id, final_status=last["status"] or board["ticket"]["status"],
+                        decision=last["note"])
+        audit.log(run_id=run_id, ticket_id=ticket_id, agent="system", step=0, event="boss_output_recovered",
+                  error=f"{type(exc).__name__}: {exc}", from_update=last)
+        # Close the Boss's loop in the trail so every reader sees its call, marked as recovered.
+        audit.log(run_id=run_id, ticket_id=ticket_id, agent="boss", step=0, event="run_end", model=MODEL_NAME,
+                  output={**call.model_dump(), "recovered_from_board": True})
+        return call
+
+    async def _full_decision(self, call: BossCall, run_id: str, recovered: bool) -> BossDecision:
+        """The Boss's own call plus what the board and the audit trail show for this run."""
+        board = await self.call_tool("get_ticket", {"ticket_id": call.ticket_id})
+        run = audit.read_run(run_id)
+        consulted: list[AgentName] = []
+        for e in run:
+            if e["event"] == "run_start" and e["agent"] != "boss" and e["agent"] not in consulted:
+                consulted.append(e["agent"])
+        delegations = [
+            f"{e['agent']} -> {(p.get('args') or {}).get('to')}"
+            for e in run if e["event"] == "model_response"
+            for p in e["detail"].get("parts", []) if p.get("kind") == "tool-call" and p.get("tool_name") == "delegate"
+        ]
+        boss_notes = [u["note"] for u in board.get("ticket_updates", []) if u["agent"] == "boss"]
+        pending = [r for r in board.get("payment_requests", []) if r["status"] == "pending"]
+        steps = [f"Approve or reject payment request #{r['id']}: ${r['amount']:,.2f} {r['kind'].replace('_', ' ')} "
+                 f"to {r['payee']}" for r in pending]
+        steps += [f"Review draft #{d['id']} to {d['recipient']} (not sent)" for d in board.get("drafts", [])]
+        return BossDecision(
+            ticket_id=call.ticket_id,
+            decision=call.decision,
+            final_status=call.final_status,
+            rationale=boss_notes[-1] if boss_notes else call.decision,
+            agents_consulted=consulted,
+            delegations=delegations,
+            payment_request_ids=[r["id"] for r in board.get("payment_requests", [])],
+            purchase_order_ids=[po["id"] for po in board.get("purchase_orders", [])],
+            draft_ids=[d["id"] for d in board.get("drafts", [])],
+            next_steps_for_human=steps,
+            recovered_from_board=recovered,
+        )

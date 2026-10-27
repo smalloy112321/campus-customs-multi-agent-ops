@@ -111,7 +111,7 @@ Built with PydanticAI. Every agent uses **`gpt-6-luna` through Portkey** (`backe
 
 **Agent loop** (`backend/team.py`): the Boss runs once per ticket with `Agent.iter()`. Each node is appended to `output/audit_trail.json` as it happens: `run_start`, `user_prompt`, `model_request` (tool returns), `model_response` (tool calls, text, model name, token usage), and `run_end` (structured output) or `error`. Delegations appear as nested runs with the same `run_id`, plus `parent_agent` and `depth`. The file is append-only: it is file-locked, read, appended to and atomically replaced, and never wiped.
 
-Outputs (`backend/models.py`): specialists return a `SpecialistReport`, and the Boss returns a `BossDecision`. Both carry a `facts` list (tool, field, value), so every claim traces back to an MCP tool call.
+Outputs (`backend/models.py`): specialists return a `SpecialistReport` with a `facts` list (tool, field, value), so every claim traces back to an MCP tool call. The Boss returns a short `BossCall` (status and decision; its reasoning is in its `update_ticket` note), and code expands it into a full `BossDecision` from the board and the audit trail (see Reliability).
 
 Run: `.venv/bin/python -m backend.run_tickets`. A full run resets the database first.
 
@@ -226,11 +226,21 @@ Set in `backend/config.py` and enforced by PydanticAI on every run. A run that h
 |---|---|---|
 | Total tokens per ticket (input + output) | **150,000** | Largest real ticket: 73,413 (ticket 103) |
 | Input tokens per model request | **20,000** | Largest real request: 8,122 |
-| Deadline per model request | **180 seconds** | Normal steps take well under a minute. A stuck request fails with a clear `error` event after 3 minutes instead of hanging; in one test rerun a Boss step ran 10+ minutes without an answer. |
+| Deadline per model request | **90 seconds per attempt, up to 3 attempts** | Normal steps take 2–6 seconds. A stuck request is retried on `gpt-6-luna` instead of hanging; in one test rerun a Boss step ran 10+ minutes without an answer. See Reliability below. |
 | Output tokens per response | **not capped (tried and removed)** | We tried `max_tokens` = 4,000. In test reruns after the Problem 9 run, the Boss's final structured answer used the whole 4,000 on hidden reasoning (`gpt-6-luna` counts reasoning as output), and the run stopped with an error. The submitted Problem 9 run had no per-response cap. Token limits are checked only after a response returns, so the request deadline above is the guard against a stuck step. |
 | Model requests per ticket | **60** | Largest real ticket: 21 |
 | Delegations per ticket / chain depth | **12 / 3** | Largest real ticket: 3 / 2 |
 | Audit-trail text per field | **6,000 characters** | Long tool results are trimmed so the trail stays readable |
+
+### Reliability (what happens when the model stalls)
+
+In test reruns after the Problem 9 run, `gpt-6-luna` stalled six times, always on the same step: the Boss's last request, where it wrote its long structured final answer *after* it had already recorded its decision with `update_ticket`. Every other step answered in 2–6 seconds. Three fixes, so a stall can't strand a ticket:
+
+1. **Smaller final answer.** The Boss now returns only `ticket_id`, `final_status` and a one-to-two-sentence `decision` (`BossCall`). Its reasoning lives in its `update_ticket` note. Code builds the full `BossDecision` (agents consulted, delegations, request, PO and draft IDs, next steps for the human) from the board and the audit trail. Those were facts the model had to copy before; now they can't be miscopied.
+2. **Retry on the same model.** Each request has a 90-second deadline and up to 3 attempts, all `gpt-6-luna` (`FallbackModel` over three copies of the same model, so no other model is ever used).
+3. **Recover from the board.** If every attempt fails but the Boss already recorded its decision with `update_ticket` in this run, the ticket finishes from that recorded decision. This is logged as `boss_output_recovered`, the decision is marked `recovered_from_board: true`, and it still waits for a human if a payment is pending. If the Boss recorded nothing, the run fails as before; nothing is invented. A specialist that fails is reported to the agent that called it (`delegation_failed`) instead of crashing the ticket.
+
+A usage limit is deliberately *not* recovered: hitting a token or request budget stops the ticket.
 
 Prompt-side savings flagged by the efficiency meter: put the shop date and the facts already gathered into each delegation task, and have the Boss trust a specialist's sourced `facts` instead of re-fetching them.
 
@@ -251,12 +261,14 @@ Prompt-side savings flagged by the efficiency meter: put the shop date and the f
 
 ## Full run results (Problem 9)
 
-Reset from the board at 2026-10-27 10:55. All three tickets were run from the board, then the human approved the two payments (overdue invoice first). The details are in `output/desk_tickets.html` (Actual sections and Cash tab), `output/resolved_tickets.json` and `output/resolved_board.html`, built by `scripts/build_problem9_report.py` from the audit trail and the database.
+**Final run:** reset from the board at 2026-10-27 12:33, with the reliability fixes in place. All three tickets were run from the board, then the human approved the two payments, overdue invoice first. The details are in `output/desk_tickets.html` (Actual sections, Cash tab, Reflection), `output/resolved_tickets.json` and `output/resolved_board.html`, built by `scripts/build_problem9_report.py` from the audit trail and the database.
 
 | Ticket | Agents (beyond the Boss) | Delegations | Efficiency | Resolved by | Cash |
 |---|---|---|---|---|---|
 | 101 Bulldog tee | Inventory, Accounting, Customer Service | 3 (plan 3) | 80 Acceptable | Human approval of request #1 | −$840.00 (invoice 501) |
-| 102 Rent due | Facilities, Accounting (called twice) | 3 (plan 2) | 62 Acceptable | Human approval of request #2 | −$2,400.00 (lease 1 rent) |
-| 103 Bulk hoodies | Inventory, Accounting, Customer Service | 3 (plan 3) | 85 Efficient | Run finished; nothing waiting | $0.00 (vendor blocked, no PO) |
+| 102 Rent due | Facilities → Accounting | 2 (plan 2) | 92 Efficient | Human approval of request #2 | −$2,400.00 (lease 1 rent) |
+| 103 Bulk hoodies | Inventory, Accounting, Customer Service | 3 (plan 3) | 78 Acceptable | Run finished; nothing waiting (club quoted 15% off, $49.30 each) | $0.00 (vendor blocked, no PO) |
+
+**Earlier full run** (10:55, before the reliability fixes): 80 / 62 / 85. On 102, Accounting was called twice; on 103, the Boss declined to quote a price. The Reflection compares the two runs. The audit trail keeps both, plus the stalled test reruns in between.
 
 **Cash:** starting $3,400.00 − $840.00 − $2,400.00 − $0.00 = **$160.00**, which equals `cash_accounts.balance` (checking) in `data/campus_customs_new.db`. The balance never went negative.

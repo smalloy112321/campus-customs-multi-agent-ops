@@ -46,20 +46,33 @@ class SpecialistReport(BaseModel):
     recommendation: str = Field(description="Your recommended next step for the Boss")
 
 
-class BossDecision(BaseModel):
-    """The Boss's final call on one ticket."""
+class BossCall(BaseModel):
+    """What the Boss itself writes as its final answer. Deliberately small: the Boss has already
+    recorded its decision on the board with update_ticket, and long structured final answers were
+    where gpt-6-luna stalled. Everything else is filled in by code (BossDecision)."""
 
     ticket_id: int
-    decision: str = Field(description="The final call in one or two sentences")
+    final_status: TicketStatus = Field(description="The same status you set with update_ticket")
+    decision: str = Field(description="The final call in one or two plain sentences")
+
+
+class BossDecision(BaseModel):
+    """The full record of the Boss's call on one ticket: the Boss's own words (BossCall) plus
+    what the board and the audit trail show, filled in by code (Team.run_ticket)."""
+
+    ticket_id: int
+    decision: str
     final_status: TicketStatus
-    rationale: str = Field(description="Why, citing tool facts and specialist reports")
+    rationale: str = Field(description="The Boss's own update_ticket note")
     agents_consulted: list[AgentName] = Field(default_factory=list)
-    facts: list[Fact] = Field(default_factory=list)
-    payment_request_ids: list[int] = Field(default_factory=list, description="Requests waiting for a human")
+    delegations: list[str] = Field(default_factory=list)
+    payment_request_ids: list[int] = Field(default_factory=list)
     purchase_order_ids: list[int] = Field(default_factory=list)
     draft_ids: list[int] = Field(default_factory=list)
-    blockers: list[str] = Field(default_factory=list)
     next_steps_for_human: list[str] = Field(default_factory=list)
+    recovered_from_board: bool = Field(
+        default=False, description="True if the Boss's final answer never arrived and the call was "
+        "taken from the decision it had already recorded with update_ticket")
 
 
 # ---------------------------------------------------------------------------
@@ -104,6 +117,9 @@ AuditEvent = Literal[
     "human_decision",
     "ticket_closed",
     "awaiting_human",
+    "delegation_failed",
+    "boss_output_recovered",
+    "boss_decision",
     "error",
 ]
 

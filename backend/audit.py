@@ -59,6 +59,13 @@ def append_entry(entry: AuditEntry) -> None:
         os.replace(tmp, AUDIT_PATH)
 
 
+def read_run(run_id: str) -> list[dict]:
+    """Every entry for one run, in order."""
+    if not AUDIT_PATH.exists() or not AUDIT_PATH.stat().st_size:
+        return []
+    return [e for e in json.loads(AUDIT_PATH.read_text()) if e.get("run_id") == run_id]
+
+
 def log(
     *,
     run_id: str,
