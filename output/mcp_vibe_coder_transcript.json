@@ -1,0 +1,26 @@
+{
+  "vibe_coder": "Claude Code",
+  "mcp_server": "campus-customs",
+  "run_at": "2026-10-27T16:50:58Z",
+  "note": "Prompts were typed by Samantha in the parent Claude Code session and relayed verbatim to this session, which called each tool through the campus-customs MCP server registered in .mcp.json. No scripts or direct database reads were used.",
+  "tests": [
+    {
+      "prompt": "Use the campus-customs MCP server to check stock for ticket 101: SKU CC-TEE-WHITE, size S, quantity 1.",
+      "tool": "check_stock",
+      "arguments": {"sku": "CC-TEE-WHITE", "size": "S", "qty_needed": 1},
+      "tool_output": {"found":true,"sku":"CC-TEE-WHITE","name":"Classic Bulldog Tee","size":"S","location":"Aisle B","on_hand":0,"qty_needed":1,"shortfall":1,"can_fill_from_stock":false}
+    },
+    {
+      "prompt": "Use the campus-customs MCP server to check vendor 1's status for ticket 101. Will they ship, and what is the lead time?",
+      "tool": "check_vendor_status",
+      "arguments": {"vendor_id": 1},
+      "tool_output": {"found":true,"today":"2026-08-31","vendors":[{"vendor_id":1,"name":"Bulldog Print Co","specialty":"apparel reprint","lead_days":5,"open_invoices":[],"open_balance":0,"will_ship":true}]}
+    },
+    {
+      "prompt": "Use the campus-customs MCP server to check rent for ticket 102 (lease 1).",
+      "tool": "check_rent_due",
+      "arguments": {"lease_id": 1},
+      "tool_output": {"found":true,"today":"2026-08-31","lease_id":1,"space_name":"Chapel Street shop","landlord":"Elm City Properties","monthly_rent":2400,"next_due":"2026-10-02","days_until_due":32,"is_overdue":false,"cash_accounts":[{"name":"checking","balance":160,"can_cover_rent":false}]}
+    }
+  ]
+}

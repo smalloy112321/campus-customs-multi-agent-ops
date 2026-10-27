@@ -83,6 +83,21 @@ This is a log of the prompts I typed into the vibe coder. It has one section for
 
 **Follow-up:** None needed at the time. Nothing was lacking after the first prompt: the AI wrote `.mcp.json`, connected over stdio, called all three tools, and checked each output against the database. All three passed.
 
+**Later follow-up prompts** (from the Problem 11 push toward 100), typed in a Claude Code session opened in the project folder so it loaded `.mcp.json`:
+> Use the campus-customs MCP server to check stock for ticket 101: SKU CC-TEE-WHITE, size S, quantity 1.
+
+> Use the campus-customs MCP server to check vendor 1's status for ticket 101. Will they ship, and what is the lead time?
+
+> Use the campus-customs MCP server to check rent for ticket 102 (lease 1).
+
+**What was lacking:** The first test called the tools through a script using `.mcp.json`, not through the vibe coder itself, but the assignment asks for the tools to be tested "with your vibe coder connected".
+
+**Result:** Claude Code called `check_stock`, `check_vendor_status` and `check_rent_due` itself through the `campus-customs` MCP server. The prompts were relayed word for word from this session. The raw prompts and outputs are in `output/mcp_vibe_coder_transcript.json`, and `mcp_smoke.json` (`vibe_coder_test`) shows every value matches the committed working DB:
+- tee 0 on hand;
+- vendor 1: 5-day lead time, no open invoices, will ship;
+- rent $2,400 due 2026-10-02;
+- checking $160.
+
 **Later fix** (from the Problem 11 grading follow-up): the database committed to GitHub is the post-run working copy, so the old smoke outputs (invoice 501 open, checking $3,400) no longer matched it. I had the smoke test re-run against the committed working DB. All three checks pass against it (invoice 501 paid, rent due 2026-10-02, checking $160), and `mcp_smoke.json` records which state was checked.
 
 ---

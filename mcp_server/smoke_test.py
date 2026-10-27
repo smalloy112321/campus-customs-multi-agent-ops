@@ -18,6 +18,7 @@ sys.path.insert(0, str(ROOT))
 from backend.config import load_mcp_config  # noqa: E402
 DB_PATH = ROOT / "data" / "campus_customs_new.db"
 OUT_PATH = ROOT / "output" / "mcp_smoke.json"
+VIBE_PATH = ROOT / "output" / "mcp_vibe_coder_transcript.json"  # Claude Code calling the tools itself
 
 TESTS = [
     {
@@ -92,6 +93,7 @@ async def main() -> None:
                     "passed": all(c["match"] for c in comparisons.values()),
                 }
             )
+    vibe = check_vibe_coder(conn)
     state = conn.execute(
         "SELECT (SELECT qty FROM inventory WHERE sku = 'CC-TEE-WHITE' AND size = 'S'), "
         "(SELECT status FROM invoices WHERE id = 501), (SELECT next_due FROM leases WHERE id = 1), "
@@ -111,11 +113,51 @@ async def main() -> None:
         "connection": "stdio via .mcp.json (server: campus-customs)",
         "database": str(DB_PATH.relative_to(ROOT)),
         "tools_listed": listed,
-        "all_passed": all(r["passed"] for r in results),
+        "all_passed": all(r["passed"] for r in results) and (vibe is None or vibe["all_match_db"]),
+        "vibe_coder_test": vibe,
         "tests": results,
     }
     OUT_PATH.write_text(json.dumps(evidence, indent=2) + "\n")
     print(json.dumps(evidence, indent=2))
+
+
+def check_vibe_coder(conn: sqlite3.Connection) -> dict | None:
+    """Check Claude Code's own MCP tool calls (output/mcp_vibe_coder_transcript.json) against the DB."""
+    if not VIBE_PATH.exists():
+        return None
+    vibe = json.loads(VIBE_PATH.read_text())
+    one = lambda sql: conn.execute(sql).fetchone()[0]  # noqa: E731
+    expected = {
+        "check_stock": lambda o: {
+            "on_hand": (o["on_hand"], one("SELECT qty FROM inventory WHERE sku = 'CC-TEE-WHITE' AND size = 'S'")),
+        },
+        "check_vendor_status": lambda o: {
+            "lead_days": (o["vendors"][0]["lead_days"], one("SELECT lead_days FROM vendors WHERE id = 1")),
+            "open_invoice_count": (len(o["vendors"][0]["open_invoices"]),
+                                   one("SELECT COUNT(*) FROM invoices WHERE vendor_id = 1 AND status = 'open'")),
+            "will_ship": (o["vendors"][0]["will_ship"],
+                          one("SELECT COUNT(*) FROM invoices WHERE vendor_id = 1 AND status = 'open'") == 0),
+        },
+        "check_rent_due": lambda o: {
+            "monthly_rent": (o["monthly_rent"], one("SELECT monthly_rent FROM leases WHERE id = 1")),
+            "next_due": (o["next_due"], one("SELECT next_due FROM leases WHERE id = 1")),
+            "checking_balance": (o["cash_accounts"][0]["balance"], one("SELECT balance FROM cash_accounts WHERE name = 'checking'")),
+        },
+    }
+    checks = []
+    for t in vibe["tests"]:
+        fields = {k: {"tool": a, "db": b, "match": a == b} for k, (a, b) in expected[t["tool"]](t["tool_output"]).items()}
+        checks.append({"prompt": t["prompt"], "tool": t["tool"], "fields": fields,
+                       "passed": all(f["match"] for f in fields.values())})
+    return {
+        "source": str(VIBE_PATH.relative_to(ROOT)),
+        "vibe_coder": vibe["vibe_coder"],
+        "run_at": vibe["run_at"],
+        "how": "A Claude Code session opened in this folder loaded .mcp.json and called the campus-customs "
+               "MCP tools itself; the raw prompts and outputs are in the source file.",
+        "all_match_db": all(c["passed"] for c in checks),
+        "checks": checks,
+    }
 
 
 if __name__ == "__main__":

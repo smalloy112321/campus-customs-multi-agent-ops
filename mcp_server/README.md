@@ -61,3 +61,5 @@ Copies the original over the working copy and checks they are identical. This is
 ```
 
 Evidence is written to `output/mcp_smoke.json`.
+
+**Vibe-coder test:** a Claude Code session opened in this project loads `.mcp.json` and calls `check_stock`, `check_vendor_status` and `check_rent_due` itself. The raw prompts and outputs are in `output/mcp_vibe_coder_transcript.json`. The smoke test checks that file against the database too (`vibe_coder_test` in `mcp_smoke.json`).

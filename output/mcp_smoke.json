@@ -1,5 +1,5 @@
 {
-  "run_at": "2026-10-27T12:42:59",
+  "run_at": "2026-10-27T12:51:40",
   "db_state_checked": {
     "tee_S_on_hand": 0,
     "invoice_501_status": "paid",
@@ -31,6 +31,71 @@
     "update_ticket"
   ],
   "all_passed": true,
+  "vibe_coder_test": {
+    "source": "output/mcp_vibe_coder_transcript.json",
+    "vibe_coder": "Claude Code",
+    "run_at": "2026-10-27T16:50:58Z",
+    "how": "A Claude Code session opened in this folder loaded .mcp.json and called the campus-customs MCP tools itself; the raw prompts and outputs are in the source file.",
+    "all_match_db": true,
+    "checks": [
+      {
+        "prompt": "Use the campus-customs MCP server to check stock for ticket 101: SKU CC-TEE-WHITE, size S, quantity 1.",
+        "tool": "check_stock",
+        "fields": {
+          "on_hand": {
+            "tool": 0,
+            "db": 0,
+            "match": true
+          }
+        },
+        "passed": true
+      },
+      {
+        "prompt": "Use the campus-customs MCP server to check vendor 1's status for ticket 101. Will they ship, and what is the lead time?",
+        "tool": "check_vendor_status",
+        "fields": {
+          "lead_days": {
+            "tool": 5,
+            "db": 5,
+            "match": true
+          },
+          "open_invoice_count": {
+            "tool": 0,
+            "db": 0,
+            "match": true
+          },
+          "will_ship": {
+            "tool": true,
+            "db": true,
+            "match": true
+          }
+        },
+        "passed": true
+      },
+      {
+        "prompt": "Use the campus-customs MCP server to check rent for ticket 102 (lease 1).",
+        "tool": "check_rent_due",
+        "fields": {
+          "monthly_rent": {
+            "tool": 2400,
+            "db": 2400.0,
+            "match": true
+          },
+          "next_due": {
+            "tool": "2026-10-02",
+            "db": "2026-10-02",
+            "match": true
+          },
+          "checking_balance": {
+            "tool": 160,
+            "db": 160.0,
+            "match": true
+          }
+        },
+        "passed": true
+      }
+    ]
+  },
   "tests": [
     {
       "prompt": "Use the campus-customs MCP server to check stock for ticket 101: SKU CC-TEE-WHITE, size S, quantity needed 1.",

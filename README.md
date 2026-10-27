@@ -107,7 +107,8 @@ The full map is in `output/harness.md`.
 | `resolved_tickets.json` | Each ticket's final status, outcome, agent contributions and human approvals |
 | `resolved_board.html` | Double-click: screenshots of the React board for each resolved ticket |
 | `audit_trail.json` | Append-only log of every agent-loop step (never wiped) |
-| `mcp_smoke.json` | MCP connection test: prompt, tool and output, checked against the DB |
+| `mcp_smoke.json` | MCP connection test: prompt, tool and output, checked against the DB, including Claude Code's own tool calls |
+| `mcp_vibe_coder_transcript.json` | Claude Code (the vibe coder) calling the three MCP tools through `.mcp.json`: prompts, tool names, raw outputs |
 | `design.md` | Dashboard look and the reasons behind it |
 | `github_url.txt` | This repository's URL |
 | `../AI_prompts.md` | Every prompt typed, one section per problem |
@@ -198,6 +199,7 @@ campus-customs-multi-agent-ops/
 │   ├── github_url.txt   # this repository's URL
 │   ├── harness.md   # tables, tools, agents, routes, dashboard, safety
 │   ├── mcp_smoke.json
+│   ├── mcp_vibe_coder_transcript.json   # Claude Code calling the MCP tools itself
 │   ├── resolved_board.html   # screenshots of the board, per resolved ticket
 │   └── resolved_tickets.json
 ├── scripts/
