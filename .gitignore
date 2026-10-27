@@ -1,0 +1,26 @@
+# Secrets: never commit the real .env (only .env.example)
+.env
+.env.*
+!.env.example
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Node / Vite
+frontend/node_modules/
+frontend/dist/
+*.tsbuildinfo
+
+# OS / editor
+.DS_Store
+
+# Audit-trail write helpers (the trail itself, output/audit_trail.json, IS committed)
+output/.audit_trail.lock
+output/.audit_trail.*.tmp
+
+# SQLite side files (both .db files under data/ ARE committed)
+data/*.db-wal
+data/*.db-shm
+data/*.db-journal
