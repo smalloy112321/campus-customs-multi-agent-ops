@@ -10,7 +10,7 @@ from pydantic_ai.mcp import MCPToolset
 from pydantic_ai.models import Model
 
 from backend import audit
-from backend.config import MAX_OUTPUT_TOKENS_PER_RESPONSE, PROMPTS_DIR
+from backend.config import PROMPTS_DIR, REQUEST_TIMEOUT_SECONDS
 from backend.models import AGENT_NAMES, AgentName, TeamDeps
 
 # MCP tools only a human (dashboard) or the runner may call. No agent ever sees them.
@@ -83,5 +83,5 @@ def build_agent(spec: AgentSpec, model: Model, mcp: MCPToolset) -> Agent[TeamDep
         toolsets=[mcp.filtered(lambda ctx, tool_def: tool_def.name in allowed)],
         tools=[delegate],
         retries=2,
-        model_settings={"max_tokens": MAX_OUTPUT_TOKENS_PER_RESPONSE},
+        model_settings={"request_timeout": REQUEST_TIMEOUT_SECONDS},
     )

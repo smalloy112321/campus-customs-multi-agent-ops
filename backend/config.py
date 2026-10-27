@@ -23,13 +23,16 @@ MODEL_NAME = "gpt-6-luna"
 PORTKEY_BASE_URL = "https://api.portkey.ai/v1"
 KEY_PLACEHOLDER = "your-portkey-api-key-here"  # the value shipped in .env.example
 
-# Token budget. Sized at about 2x the largest real usage in the Problem 9 runs
-# (73k tokens per ticket, 8.1k input on one request, 1.5k output on one response),
-# so normal runs fit but a runaway delegation loop is stopped.
+# Token budget. Sized from the real Problem 9 runs (73k tokens per ticket, 8.1k input on one
+# request) so normal runs fit but a runaway delegation loop is stopped.
+# A per-response output cap (max_tokens 4k) was tried and removed: in test reruns after the
+# Problem 9 run, the Boss's final structured answer used the whole 4k on hidden reasoning and the
+# run stopped with an error. Token limits are only checked after a response returns, so a stuck
+# request gets a hard deadline instead (REQUEST_TIMEOUT_SECONDS).
 REQUEST_LIMIT_PER_TICKET = 60            # model requests across one ticket's whole delegation tree
 TOTAL_TOKENS_PER_TICKET = 150_000        # input + output tokens across that tree
 INPUT_TOKENS_PER_REQUEST = 20_000        # one model request's prompt + history
-MAX_OUTPUT_TOKENS_PER_RESPONSE = 4_000   # one model response
+REQUEST_TIMEOUT_SECONDS = 180            # deadline for one model request (all retries included)
 
 os.environ.setdefault("PYDANTIC_AI_NO_BANNER", "1")
 

@@ -226,7 +226,8 @@ Set in `backend/config.py` and enforced by PydanticAI on every run. A run that h
 |---|---|---|
 | Total tokens per ticket (input + output) | **150,000** | Largest real ticket: 73,413 (ticket 103) |
 | Input tokens per model request | **20,000** | Largest real request: 8,122 |
-| Output tokens per response (`max_tokens`) | **4,000** | Largest real response: 1,539 |
+| Deadline per model request | **180 seconds** | Normal steps take well under a minute. A stuck request fails with a clear `error` event after 3 minutes instead of hanging; in one test rerun a Boss step ran 10+ minutes without an answer. |
+| Output tokens per response | **not capped (tried and removed)** | We tried `max_tokens` = 4,000. In test reruns after the Problem 9 run, the Boss's final structured answer used the whole 4,000 on hidden reasoning (`gpt-6-luna` counts reasoning as output), and the run stopped with an error. The submitted Problem 9 run had no per-response cap. Token limits are checked only after a response returns, so the request deadline above is the guard against a stuck step. |
 | Model requests per ticket | **60** | Largest real ticket: 21 |
 | Delegations per ticket / chain depth | **12 / 3** | Largest real ticket: 3 / 2 |
 | Audit-trail text per field | **6,000 characters** | Long tool results are trimmed so the trail stays readable |

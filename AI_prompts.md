@@ -129,7 +129,7 @@ This is a log of the prompts I typed into the vibe coder. It has one section for
 
 **Result:** The Boss delegated to Inventory, then Accounting, then Customer Service. Accounting queued a payment request for invoice 501 ($840), which is waiting for human approval; nothing was paid. Customer Service saved a draft to Tauhid saying the tee is out of stock, with no counts or finances. The Boss set ticket 101 to `waiting_approval`. The audit trail recorded 53 steps, all from gpt-6-luna, and the database was reset afterwards.
 
-**Later fix** (from the Problem 11 grading follow-up): the safety section only capped requests and delegations. I added explicit token limits (150k tokens per ticket, 20k input per request, 4k output per response), sized at about twice the largest real run, and a "Token limits" table in `harness.md`.
+**Later fix** (from the Problem 11 grading follow-up): the safety section only capped requests and delegations. I added explicit token limits (150k tokens per ticket, 20k input per request), sized at about twice the largest real run, and a "Token limits" table in `harness.md`. A 4k per-response output cap was also tried, then removed and replaced by a 180-second request deadline (see Problem 11).
 
 ---
 
@@ -333,5 +333,38 @@ Repo: https://github.com/smalloy112321/campus-customs-multi-agent-ops (public, b
 - follow-ups had no "what was lacking" sentences.
 
 **Result:** All of those were fixed (see the "Later fix" and "What was lacking" lines above), then committed and pushed to the same repository.
+
+**Follow-up prompt 3:**
+> Let's do fix 1: reset, run all three tickets on the board, I'll click both approvals myself, then rebuild the reports, re-screenshot, and push.
+
+**What was lacking:** In Problem 9 the two approvals were sent by the AI at my instruction rather than clicked on the board, and the new token limits had never been tested in a live run.
+
+**Result:** The rerun didn't complete. After a reset from the board, the Boss's final step (its structured decision) kept stalling:
+- With the 4k per-response cap, it used the whole 4,000 tokens on hidden reasoning and errored. A 16k cap failed the same way.
+- With no cap, one step ran 10+ minutes.
+- With a 180-second deadline, it timed out.
+
+A one-word test call to `gpt-6-luna` answered in about 1.5 seconds, so the model was reachable; the problem was specific to that step.
+
+**Follow-up prompt 4:**
+> Stop the rerun. Restore the working database to the committed Problem 9 state, keep the audit trail as is, and leave the GitHub submission unchanged.
+
+**What was lacking:** The rerun was burning time and tokens without finishing, and it had left the working database partway through an attempt.
+
+**Result:** The working database was restored byte for byte to the committed Problem 9 state ($160, all three resolved). The local audit trail keeps the failed attempts but wasn't committed, so the submitted audit trail still ends with the Problem 9 run.
+
+**Follow-up prompt 5:**
+> What would removing the 4k cap do?
+
+> Ok let's do it
+
+**What was lacking:** The pushed code still had the 4,000-token per-response cap that stopped the Boss's final step in the reruns, so a grader's fresh run could fail the same way.
+
+**Result:** A code-and-docs-only fix:
+- removed the per-response cap;
+- added a 180-second deadline per model request, so a stuck step fails with a clear error instead of hanging;
+- updated the harness token table.
+
+The database, results, screenshots and audit trail are unchanged.
 
 ---
