@@ -1,6 +1,6 @@
 # AI Prompts Log: Homework 5 (Campus Customs Multi-Agent Operations)
 
-This is a log of the prompts I typed into the vibe coder. It has one section for each problem.
+This is a log of the prompts I typed into the vibe coder. It has one section for each problem. Every follow-up prompt has a **What was lacking** line saying what the first prompt left undone.
 
 ---
 
@@ -30,7 +30,7 @@ This is a log of the prompts I typed into the vibe coder. It has one section for
 >
 > Use my PORTKEY_API_KEY for AI calls. For this assignment, use only gpt-6-luna through Portkey for every agent. We will work one problem at a time. The final submission will be a public Github repo with the last problem showing the file tree.
 
-**Follow-up:** None needed. The AI restated the architecture, data plan and shop rules, then waited for Problem 1.
+**Follow-up:** None needed. Nothing was lacking after the first prompt: the AI restated the architecture, data plan and shop rules, then waited for Problem 1.
 
 ---
 
@@ -39,7 +39,7 @@ This is a log of the prompts I typed into the vibe coder. It has one section for
 **Prompt:**
 > Okay, let's get started. Problem 1. Create AI_prompts.md at the start of the assignment and keep it updated as you work. Put one section for each problem. Each section must include the following: the problem number and title, at least one prompt typed, and one follow-up prompt if needed.
 
-**Follow-up:** None needed. The first prompt created this file with the required structure.
+**Follow-up:** None needed. Nothing was lacking after the first prompt: it created this file with the required structure.
 
 ---
 
@@ -52,7 +52,7 @@ This is a log of the prompts I typed into the vibe coder. It has one section for
 >
 > Start output/harness.md. For each table, list the fields and one short line on why that matters for the agents. Show me the short line for each of the tables.
 
-**Follow-up:** None needed. The AI copied the database, mapped each of tickets 101, 102 and 103 to its linked rows, and started `output/harness.md`.
+**Follow-up:** None needed. Nothing was lacking after the first prompt: the AI copied the database, mapped each of tickets 101, 102 and 103 to its linked rows, and started `output/harness.md`.
 
 ---
 
@@ -70,6 +70,8 @@ This is a log of the prompts I typed into the vibe coder. It has one section for
 **Follow-up prompt:**
 > The three tool drafts look good. Keep them as written.
 
+**What was lacking:** My first prompt asked the AI to draft the tools for me to review, so it stopped at drafts. The follow-up was my sign-off to keep them.
+
 **Result:** No rewrite needed. I kept `check_stock`, `check_vendor_status` and `check_rent_due` as drafted.
 
 ---
@@ -79,7 +81,9 @@ This is a log of the prompts I typed into the vibe coder. It has one section for
 **Prompt:**
 > Let's do Problem 4. Let's add the MCP server to this project so that the vibe coder can call the tools. Save the connection JSON text in .mcp.json at the project root. Once connected, test each of the three MCP tools we made in the last problem and save the evidence in output/mcp_smoke.json. For every tool, let's include the prompt that we asked the vibe coder, the tool name, and the tool output (which must match a value in data/campus_customs_new.db). Show me the tests when you are done.
 
-**Follow-up:** None needed. The AI wrote `.mcp.json`, connected over stdio, called all three tools, and checked each output against the database. All three passed.
+**Follow-up:** None needed at the time. Nothing was lacking after the first prompt: the AI wrote `.mcp.json`, connected over stdio, called all three tools, and checked each output against the database. All three passed.
+
+**Later fix** (from the Problem 11 grading follow-up): the database committed to GitHub is the post-run working copy, so the old smoke outputs (invoice 501 open, checking $3,400) no longer matched it. I had the smoke test re-run against the committed working DB. All three checks pass against it (invoice 501 paid, rent due 2026-10-02, checking $160), and `mcp_smoke.json` records which state was checked.
 
 ---
 
@@ -121,7 +125,11 @@ This is a log of the prompts I typed into the vibe coder. It has one section for
 **Follow-up prompt:**
 > Do a live test run on ticket 101 only, so we can check the agents and the audit trail, then reset the database.
 
+**What was lacking:** The first prompt built the team, but nothing had run the agents live yet, so I couldn't see them delegate or confirm the audit trail actually recorded each step.
+
 **Result:** The Boss delegated to Inventory, then Accounting, then Customer Service. Accounting queued a payment request for invoice 501 ($840), which is waiting for human approval; nothing was paid. Customer Service saved a draft to Tauhid saying the tee is out of stock, with no counts or finances. The Boss set ticket 101 to `waiting_approval`. The audit trail recorded 53 steps, all from gpt-6-luna, and the database was reset afterwards.
+
+**Later fix** (from the Problem 11 grading follow-up): the safety section only capped requests and delegations. I added explicit token limits (150k tokens per ticket, 20k input per request, 4k output per response), sized at about twice the largest real run, and a "Token limits" table in `harness.md`.
 
 ---
 
@@ -144,7 +152,7 @@ This is a log of the prompts I typed into the vibe coder. It has one section for
 > - Plans that send every specialist on every ticket score low
 > - It would be helpful to add a measurement tool to each call based on which specialist(s) are used and which tools are run to determine if the multi-agent operation is being efficient or needs to be made more efficient
 
-**Follow-up:** None needed. The plans use 3, 2 and 3 specialists. Facilities is only on 102, and Inventory and Customer Service are skipped on 102. Each ticket tab has an efficiency meter that scores a run from `output/audit_trail.json`.
+**Follow-up:** None needed. Nothing was lacking after the first prompt: the plans use 3, 2 and 3 specialists. Facilities is only on 102, and Inventory and Customer Service are skipped on 102. Each ticket tab has an efficiency meter that scores a run from `output/audit_trail.json`.
 
 ---
 
@@ -166,23 +174,33 @@ This is a log of the prompts I typed into the vibe coder. It has one section for
 **Follow-up prompt:**
 > Upon second thought, let's also make sure that when a ticket is returned whethers its open or resolved, if its resolved it shows the efficiency number that we created in the last problem
 
+**What was lacking:** The first version said whether each ticket was open or resolved, but it didn't connect a resolved ticket to the Problem 6 efficiency score.
+
 **Result:** `GET /api/tickets` now includes an `efficiency` score for resolved tickets. It is computed by `backend/efficiency.py` from the same plan JSON the desk page uses, so both give the same score (101 = 96, 102 = 92). A live run of ticket 102 through `POST /api/tickets/102/run` went Boss → Facilities → Accounting and queued payment request 1 ($2,400 rent) for approval. The AI did not approve the payment itself; that is left for me.
 
 **Follow-up prompt 2:**
 > Leave it pending. I'll approve request 1 myself with the curl command, then you check the cash and lease.
+
+**What was lacking:** The AI correctly wouldn't approve a payment itself, so the run stopped at a pending request. A human had to approve it before the cash and lease could change.
 
 **Result:** I approved request 1 with curl. The AI confirmed checking went from $3,400 to $1,000, payment #1 was recorded with my name, lease 1's next due date moved to 2026-10-02, and a `human_decision` event was logged.
 
 **Follow-up prompt 3:**
 > Yes: when a human approves the last pending payment on a ticket, mark that ticket resolved (logged as a human update) so its efficiency score shows.
 
+**What was lacking:** After my approval the rent was paid, but ticket 102 still said `waiting_approval`. So it never counted as resolved, and its efficiency score couldn't show.
+
 **Result:** `approve_payment` now resolves the ticket in the same transaction when no other payment on that ticket is pending, and logs a `human` row in `ticket_updates`. Tested on a scratch DB: first of two payments leaves it open, the last resolves it, and refused or ticketless payments change nothing.
 
 **Follow-up prompt 4:**
 > Reset the database and rerun ticket 102 through the API; I'll approve the rent again myself so it resolves under the new rule.
 
+**What was lacking:** My earlier approval happened before the new rule existed, so ticket 102 needed a fresh run and a fresh approval to resolve under it.
+
 **Follow-up prompt 5** (after my curl and /docs attempts didn't reach the server):
 > I approve payment request 1 ($2,400 rent to Elm City Properties, ticket 102). Send the approve call for me with approved_by "Samantha Malloy", then recheck ticket 102.
+
+**What was lacking:** My curl and /docs approval attempts never reached the server, so the payment was still pending. I gave the approval in chat and had the AI send the call.
 
 **Result:** The rerun went Boss → Facilities → Accounting. After my approval, cash went from $3,400 to $1,000, lease 1's next due date moved to 2026-10-02, and ticket 102 became `resolved`, logged as a human update. `GET /api/tickets` now shows 102 as resolved with efficiency 92 (Efficient).
 
@@ -212,11 +230,16 @@ This is a log of the prompts I typed into the vibe coder. It has one section for
 
 > I approve payment request 1 ($840 to Bulldog Print Co, invoice 501, ticket 101). Send the approve call for me with approved_by "Samantha Malloy", then check the balance and that 101 resolved.
 
+**What was lacking:** The first build looked right, but I hadn't yet seen a payment approved on the board and the balance drop. When I tried, my clicks never reached the backend: the servers had been stopped, and then my "Approving as" name was empty.
+
 **Result:** My clicks on the board never reached the backend. First the servers had been stopped while idle; then the "Approving as" name was empty. I approved in chat and the AI sent the call. Checking went from $3,400 to $2,560, invoice 501 is `paid`, and ticket 101 resolved with efficiency 96. The board updated on its own: balance $2,560, Needs you 0, Resolved 2. Design follow-up: the Approve button shouldn't fail silently when the name is missing.
 
-**Follow-up:** _(design feedback round to come)_
+**Follow-up prompt (design fix, sent with the Problem 11 grading follow-up):**
+> Fix all the gaps you listed: smoke evidence vs the committed working DB, the Reflection's missing performance-evaluation and approvals parts, explicit token limits, the design.md and AI_prompts placeholders, and the 'what was lacking' sentences. Then commit and push.
 
-**Result so far:** The board reuses the Homework 4 pennant logo, the Yale fans hero photo, the Yale blue and cream palette, and the store's fonts. Run from the dashboard: ticket 101 went Boss → Inventory, Accounting, Customer Service and stopped at a gold approval card for $840. Ticket 103 went Boss → Inventory, Accounting, Customer Service and was marked resolved when the run finished, with efficiency 92. The backend gained a summary route, improvement tips, and resolve-on-run-finish.
+**What was lacking:** `design.md` still had a "Your feedback: to fill in" placeholder, and the Approve button failed quietly when the name was empty or the backend was offline. Now Approve stays disabled with a visible reason ("Type your name to enable Approve." or "The backend is offline…") until it can work. `design.md` records this as Polish round 1.
+
+**Result:** The board reuses the Homework 4 pennant logo, the Yale fans hero photo, the Yale blue and cream palette, and the store's fonts. Run from the dashboard: ticket 101 went Boss → Inventory, Accounting, Customer Service and stopped at a gold approval card for $840. Ticket 103 went Boss → Inventory, Accounting, Customer Service and was marked resolved when the run finished, with efficiency 92. The backend gained a summary route, improvement tips, and resolve-on-run-finish.
 
 ---
 
@@ -243,6 +266,8 @@ This is a log of the prompts I typed into the vibe coder. It has one section for
 **Follow-up prompt:**
 > I approve payment request 1 ($840 to Bulldog Print Co, invoice 501, ticket 101) and payment request 2 ($2,400 rent to Elm City Properties, lease 1, ticket 102). Send both approve calls for me with approved_by "Samantha Malloy", request 1 first, then finish Problem 9.
 
+**What was lacking:** The agents can only request payments, so after the three runs tickets 101 and 102 were still waiting for my approval and couldn't resolve.
+
 **Result:** Reset from the board (starting checking $3,400.00). All three tickets were run from the board. 103 resolved when its run finished ($0, vendor blocked). 101 and 102 resolved after my approvals: −$840.00 and −$2,400.00. Ending checking is $160.00, which matches `cash_accounts`. Efficiency was 80, 62 and 85. On 102, Accounting was called twice (once by Facilities, once by the Boss), so it lost points. `scripts/build_problem9_report.py` builds the Actual and Cash sections, `resolved_tickets.json` and `resolved_board.html` straight from the audit trail and the database, and stops if the cash doesn't reconcile.
 
 ---
@@ -260,7 +285,12 @@ This is a log of the prompts I typed into the vibe coder. It has one section for
 >
 > Every answer should tie to this app and the three tickets we ran using the ticket tabs and cash tab as evidence. Generic AI essays without Campus Customs details will score low.
 
-**Follow-up:** None needed. The reflection cites run evidence from the ticket and Cash tabs:
+**Follow-up prompt (after grading against the assignment page, Problem 11):**
+> Fix all the gaps you listed: smoke evidence vs the committed working DB, the Reflection's missing performance-evaluation and approvals parts, explicit token limits, the design.md and AI_prompts placeholders, and the 'what was lacking' sentences. Then commit and push.
+
+**What was lacking:** My first prompt left out the assignment's first question (how I'd evaluate the agents' performance on each ticket and why), and the reflection didn't spell out the human approvals on each ticket. The follow-up added Reflection sections 1 (performance evaluation, graded on facts, safety, outcome and efficiency) and 2 (human approvals per ticket).
+
+**Result of the first prompt:** the reflection cites run evidence from the ticket and Cash tabs:
 - 101 matched the plan, but the Boss repeated its own calls.
 - 102 had an extra Accounting handoff, which also produced the "pay the invoice first" advice.
 - 103's Boss declined to quote any price.
@@ -279,12 +309,29 @@ It names three solvable problems (the $8 tee restock, Crest Mugs from Elm City G
 >
 > README should explain: copy original DB to the working copy when you need a clean run, start MCP server, start FastAPI backend, start the React board, reset the DB before a full three-ticket run.
 
-**Follow-up:** None needed. Before pushing, the AI:
+**Before pushing, the AI:**
 - scanned every file for the real Portkey key (0 hits);
 - made `.mcp.json` use project-relative paths;
 - wrote the README with the run steps and the full file tree;
 - tested the README steps on a fresh clone: setup, DB copy, MCP smoke test, backend routes, and board build.
 
 Repo: https://github.com/smalloy112321/campus-customs-multi-agent-ops (public, both `.db` files included, no `.env`).
+
+**Follow-up prompt 1:**
+> Now I want you to compare that URL to my homework. Please note that each Problem is on two panels (panel A and panel B). Please let me know how you'd grade my work against the assignment: https://zlisto.github.io/mgt_409_fa26/hw5/p1.html
+
+**What was lacking:** The repo was pushed, but nobody had checked it against both panels of every problem before I submitted. The comparison estimated about 91/100 and listed the gaps.
+
+**Follow-up prompt 2:**
+> Fix all the gaps you listed: smoke evidence vs the committed working DB, the Reflection's missing performance-evaluation and approvals parts, explicit token limits, the design.md and AI_prompts placeholders, and the 'what was lacking' sentences. Then commit and push.
+
+**What was lacking:** The grading pass found:
+- the smoke evidence didn't match the committed working DB;
+- the Reflection was missing the performance evaluation and the per-ticket approvals;
+- there were no explicit token limits;
+- placeholders were left in `design.md` and this file;
+- follow-ups had no "what was lacking" sentences.
+
+**Result:** All of those were fixed (see the "Later fix" and "What was lacking" lines above), then committed and pushed to the same repository.
 
 ---

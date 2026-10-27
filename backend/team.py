@@ -19,10 +19,24 @@ from pydantic_core import to_jsonable_python
 from backend import audit
 from backend.agents import SPECS
 from backend.agents.base import build_agent
-from backend.config import MODEL_NAME, is_allowed_model, load_mcp_config, make_model
+from backend.config import (
+    INPUT_TOKENS_PER_REQUEST,
+    MODEL_NAME,
+    REQUEST_LIMIT_PER_TICKET,
+    TOTAL_TOKENS_PER_TICKET,
+    is_allowed_model,
+    load_mcp_config,
+    make_model,
+)
 from backend.models import AgentName, BossDecision, DelegationBudget, TeamDeps
 
-REQUEST_LIMIT_PER_TICKET = 60  # model requests across one ticket's whole delegation tree
+# One budget per ticket: usage is shared across the whole delegation tree, so these caps
+# apply to the ticket, not to each agent.
+TICKET_LIMITS = UsageLimits(
+    request_limit=REQUEST_LIMIT_PER_TICKET,
+    total_tokens_limit=TOTAL_TOKENS_PER_TICKET,
+    per_request_input_tokens_limit=INPUT_TOKENS_PER_REQUEST,
+)
 
 
 def _mcp_client() -> Client:
@@ -113,7 +127,7 @@ class Team:
                 task,
                 deps=deps,
                 usage=usage,
-                usage_limits=UsageLimits(request_limit=REQUEST_LIMIT_PER_TICKET),
+                usage_limits=TICKET_LIMITS,
             ) as run:
                 async for node in run:
                     step += 1

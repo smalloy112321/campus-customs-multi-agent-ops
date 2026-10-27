@@ -1,5 +1,13 @@
 {
-  "run_at": "2026-10-27T00:47:30",
+  "run_at": "2026-10-27T11:37:31",
+  "db_state_checked": {
+    "tee_S_on_hand": 0,
+    "invoice_501_status": "paid",
+    "lease_1_next_due": "2026-10-02",
+    "checking_balance": 160.0,
+    "payments": 2,
+    "note": "Outputs are compared with data/campus_customs_new.db as it is at run time. Re-run after a reset and the same checks pass against the original values (invoice 501 open, rent due 2026-09-02, checking $3,400)."
+  },
   "connection": "stdio via .mcp.json (server: campus-customs)",
   "database": "data/campus_customs_new.db",
   "tools_listed": [
@@ -15,8 +23,10 @@
     "get_ticket",
     "list_open_tickets",
     "list_pending_approvals",
+    "list_tickets",
     "reject_payment",
     "request_payment",
+    "resolve_ticket_after_run",
     "save_draft",
     "update_ticket"
   ],
@@ -73,30 +83,19 @@
             "name": "Bulldog Print Co",
             "specialty": "apparel reprint",
             "lead_days": 5,
-            "open_invoices": [
-              {
-                "invoice_id": 501,
-                "amount": 840.0,
-                "due_date": "2026-08-28",
-                "description": "Rush reprint CC-TEE-WHITE S",
-                "days_overdue": 3,
-                "is_overdue": true
-              }
-            ],
-            "open_balance": 840.0,
-            "will_ship": false
+            "open_invoices": [],
+            "open_balance": 0,
+            "will_ship": true
           }
         ]
       },
       "db_check": {
-        "query": "SELECT v.lead_days, i.id, i.amount, i.due_date, i.status FROM vendors v JOIN invoices i ON i.vendor_id = v.id WHERE v.id = 1",
+        "query": "SELECT v.lead_days, (SELECT group_concat(id) FROM invoices WHERE vendor_id = v.id AND status = 'open'), (SELECT status FROM invoices WHERE id = 501) FROM vendors v WHERE v.id = 1",
         "rows": [
           [
             5,
-            501,
-            840.0,
-            "2026-08-28",
-            "open"
+            null,
+            "paid"
           ]
         ],
         "fields": {
@@ -105,24 +104,19 @@
             "db": 5,
             "match": true
           },
-          "invoice_id": {
-            "tool": 501,
-            "db": 501,
+          "open_invoice_ids": {
+            "tool": [],
+            "db": [],
             "match": true
           },
-          "invoice_amount": {
-            "tool": 840.0,
-            "db": 840.0,
+          "will_ship": {
+            "tool": true,
+            "db": true,
             "match": true
           },
-          "invoice_due_date": {
-            "tool": "2026-08-28",
-            "db": "2026-08-28",
-            "match": true
-          },
-          "will_ship_false_because_open": {
-            "tool": false,
-            "db": false,
+          "invoice_501_status_in_db": {
+            "tool": "paid",
+            "db": "paid",
             "match": true
           }
         }
@@ -142,14 +136,14 @@
         "space_name": "Chapel Street shop",
         "landlord": "Elm City Properties",
         "monthly_rent": 2400.0,
-        "next_due": "2026-09-02",
-        "days_until_due": 2,
+        "next_due": "2026-10-02",
+        "days_until_due": 32,
         "is_overdue": false,
         "cash_accounts": [
           {
             "name": "checking",
-            "balance": 3400.0,
-            "can_cover_rent": true
+            "balance": 160.0,
+            "can_cover_rent": false
           }
         ]
       },
@@ -158,8 +152,8 @@
         "rows": [
           [
             2400.0,
-            "2026-09-02",
-            3400.0
+            "2026-10-02",
+            160.0
           ]
         ],
         "fields": {
@@ -169,13 +163,13 @@
             "match": true
           },
           "next_due": {
-            "tool": "2026-09-02",
-            "db": "2026-09-02",
+            "tool": "2026-10-02",
+            "db": "2026-10-02",
             "match": true
           },
           "checking_balance": {
-            "tool": 3400.0,
-            "db": 3400.0,
+            "tool": 160.0,
+            "db": 160.0,
             "match": true
           }
         }

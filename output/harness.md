@@ -209,13 +209,29 @@ What a real business would want before agents touch real customers and real mone
 | **No real emails or vendor calls.** | There is no send tool. `save_draft` stores `status='draft'` and returns `sent: false`. |
 | **Only `gpt-6-luna`.** | One constant in `backend/config.py`. The loop stops and logs an error if a response reports another model. |
 | **Auditability.** | Every agent-loop step is appended to `output/audit_trail.json` with run id, ticket, agent, parent, depth, step, model and token usage. |
-| **No runaway loops or spend.** | 12 delegations and a chain at most 3 deep per ticket, no self-delegation, and a model-request cap per ticket. |
+| **No runaway loops or spend.** | 12 delegations and a chain at most 3 deep per ticket, no self-delegation, and the token limits below. |
 | **Approvals record a real person.** | The board won't send an approval without a name in "Approving as". The backend refuses an empty name or an agent's name. When the human approved in chat and the assistant sent the call, the request's `decision_note` says so. |
 | **Tickets resolve only when nothing waits on a human.** | When a run finishes, `resolve_ticket_after_run` closes the ticket only if no payment is pending. Otherwise it closes when the human approves the last pending payment. |
 | **One run at a time; no re-running closed tickets.** | Tickets share one checking account, so `POST /run` refuses while another run is active or the ticket is already resolved. Reset is also refused mid-run. |
 | **Agents can't reset, approve or close tickets.** | `reset_db.py` isn't an MCP tool. `approve_payment`, `reject_payment` and `resolve_ticket_after_run` are hidden from every agent's toolset (`HUMAN_ONLY_TOOLS`). |
 | **The board shows the current shop only.** | After a reset, the board shows only runs since that reset, so old results never look current. The audit file itself is never trimmed. |
 | **Secrets stay secret.** | `PORTKEY_API_KEY` is loaded from `.env` (git-ignored). `.env.example` holds the variable name only. |
+
+
+### Token limits (keep cost in check)
+
+Set in `backend/config.py` and enforced by PydanticAI on every run. A run that hits a limit stops with an `error` event in the audit trail instead of continuing to spend. Usage is shared across a ticket's whole delegation tree, so the per-ticket caps cover the Boss *and* every specialist it calls.
+
+| Limit | Value | Sized against the real Problem 9 runs |
+|---|---|---|
+| Total tokens per ticket (input + output) | **150,000** | Largest real ticket: 73,413 (ticket 103) |
+| Input tokens per model request | **20,000** | Largest real request: 8,122 |
+| Output tokens per response (`max_tokens`) | **4,000** | Largest real response: 1,539 |
+| Model requests per ticket | **60** | Largest real ticket: 21 |
+| Delegations per ticket / chain depth | **12 / 3** | Largest real ticket: 3 / 2 |
+| Audit-trail text per field | **6,000 characters** | Long tool results are trimmed so the trail stays readable |
+
+Prompt-side savings flagged by the efficiency meter: put the shop date and the facts already gathered into each delegation task, and have the Boss trust a specialist's sourced `facts` instead of re-fetching them.
 
 ---
 

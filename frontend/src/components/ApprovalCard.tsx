@@ -15,14 +15,19 @@ interface Props {
   approver: string
   onApproverChange: (name: string) => void
   onDecided: () => Promise<void>
+  offline: boolean
 }
 
-export default function ApprovalCard({ request, cash, approver, onApproverChange, onDecided }: Props) {
+export default function ApprovalCard({ request, cash, approver, onApproverChange, onDecided, offline }: Props) {
   const [busy, setBusy] = useState<'approve' | 'reject' | null>(null)
   const [error, setError] = useState<string | null>(null)
   const after = cash ? cash.balance - request.amount : null
   const short = after !== null && after < 0
   const nameId = `approver-${request.id}`
+  const hintId = `approver-hint-${request.id}`
+  const named = approver.trim().length > 0
+  // Approve never fails silently: it stays disabled, with the reason shown, until it can work.
+  const blocked = offline ? 'The backend is offline. Start uvicorn, then try again.' : !named ? 'Type your name to enable Approve.' : null
 
   async function decide(action: 'approve' | 'reject') {
     if (!approver.trim()) {
@@ -58,15 +63,19 @@ export default function ApprovalCard({ request, cash, approver, onApproverChange
       <div className="approval-actions">
         <label htmlFor={nameId} className="field-label">Approving as</label>
         <input id={nameId} className="field" value={approver} placeholder="Your name"
-          onChange={(e) => onApproverChange(e.target.value)} autoComplete="name" />
+          onChange={(e) => onApproverChange(e.target.value)} autoComplete="name" aria-describedby={hintId} />
         <div className="approval-buttons">
-          <button type="button" className="btn btn-gold" onClick={() => decide('approve')} disabled={!!busy}>
+          <button type="button" className="btn btn-gold" onClick={() => decide('approve')} disabled={!!busy || !!blocked}
+            aria-describedby={hintId}>
             {busy === 'approve' ? 'Paying…' : `Approve ${money(request.amount)}`}
           </button>
-          <button type="button" className="btn btn-ghost-dark" onClick={() => decide('reject')} disabled={!!busy}>
+          <button type="button" className="btn btn-ghost-dark" onClick={() => decide('reject')} disabled={!!busy || !!blocked}>
             {busy === 'reject' ? 'Rejecting…' : 'Reject'}
           </button>
         </div>
+        <p id={hintId} className={blocked ? `approval-hint${offline ? ' offline' : ''}` : 'sr-only'} aria-live="polite">
+          {blocked ?? `Approving as ${approver.trim()}.`}
+        </p>
         {error && <p className="approval-error" role="alert">{error}</p>}
       </div>
     </section>

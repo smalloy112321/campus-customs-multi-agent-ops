@@ -58,11 +58,17 @@ The same color is used for the roster avatar, the feed dot and name, the summary
 - Screen readers: `aria-live` on the workspace and the cash card, plus descriptive alt text on the hero, the gauge and the score badges.
 - Clear states: loading text, "No run yet" empty states, a "Live" pill and typing dots while agents work, and red banners if the backend can't be reached ("Is uvicorn running?") or a run errors.
 
-## Next polish round (your feedback goes here)
-These are candidates I'll work through once you've looked at it:
-- **Your feedback:** _(to fill in)_
-- **Approve button should never fail silently.** Testing showed the name requirement was easy to miss: clicking Approve with an empty "Approving as" field only showed a small red line. Disable Approve until a name is entered, with a visible prompt. Also show a clear "backend offline" state right on the approval card.
-- Collapse the feed to one line per agent turn, with an "expand" option, for long runs.
-- Toast confirmations after Approve, Reject and Reset, with the new balance animating down.
-- A compact "Cash" view (payments made, what's pending) to feed the empty Cash tab from Problem 6.
-- Tighter mobile layout for the roster and the approval card.
+## Polish round 1: changes from real use
+
+We didn't hold a separate styling review. The first real feedback came from using the board for the Problem 8 and 9 approvals, and it pointed at one problem: **Approve could fail without telling you.** My first two approvals on the board never reached the backend (the servers had been stopped, and then the "Approving as" name was empty). The button looked clickable both times.
+
+| Change | Why |
+|---|---|
+| **Approve and Reject stay disabled until a name is typed**, with a gold hint under the buttons: "Type your name to enable Approve." | Before, clicking with an empty name only showed a small red line after the click, which is easy to miss. Now the button explains itself before you try. |
+| **An offline state on the approval card.** If the backend can't be reached, the buttons disable and a red hint says "The backend is offline. Start uvicorn, then try again." | The page-level banner was easy to miss when you were focused on the card. The money action now shows the reason right where you'd click. |
+| **The hint is linked to the buttons and input for screen readers** (`aria-describedby`, `aria-live`). | The reason a button is disabled is announced, not just shown. |
+
+**Still on the list:**
+- one-line-per-turn collapsing for long feeds;
+- toast confirmations after Approve, Reject and Reset, with the balance animating down;
+- a tighter mobile layout for the roster and the approval card.

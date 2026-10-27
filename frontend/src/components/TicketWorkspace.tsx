@@ -16,9 +16,10 @@ interface Props {
   approver: string
   onApproverChange: (name: string) => void
   onChanged: () => Promise<void>
+  offline: boolean
 }
 
-export default function TicketWorkspace({ ticket, activeRun, approvals, cash, approver, onApproverChange, onChanged }: Props) {
+export default function TicketWorkspace({ ticket, activeRun, approvals, cash, approver, onApproverChange, onChanged, offline }: Props) {
   const [events, setEvents] = useState<AgentEvent[]>([])
   const [summary, setSummary] = useState<Summary | null>(null)
   const [efficiency, setEfficiency] = useState<Efficiency | null>(null)
@@ -127,7 +128,7 @@ export default function TicketWorkspace({ ticket, activeRun, approvals, cash, ap
 
       {approvals.map((req) => (
         <ApprovalCard key={req.id} request={req} cash={cash} approver={approver}
-          onApproverChange={onApproverChange} onDecided={afterDecision} />
+          onApproverChange={onApproverChange} onDecided={afterDecision} offline={offline} />
       ))}
 
       <div className="ws-grid">

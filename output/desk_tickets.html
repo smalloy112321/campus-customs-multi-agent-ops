@@ -93,9 +93,66 @@
   <div role="tabpanel" id="panel-reflection" aria-labelledby="tab-reflection" hidden>
     <section class="card reflection">
       <h2>Reflection</h2>
-      <p class="sub">What we learned from planning (Problem 6), building, and the full run after the reset (Problem 9). Evidence links: <a href="#101">Ticket 101</a> · <a href="#102">Ticket 102</a> · <a href="#103">Ticket 103</a> · <a href="#cash">Cash</a>. All figures come from those tabs, <code>resolved_tickets.json</code> and the audit trail.</p>
+      <p class="sub">How the agents performed, what I approved, and what we learned from planning (Problem 6), building, and the full run after the reset (Problem 9). Evidence links: <a href="#101">Ticket 101</a> · <a href="#102">Ticket 102</a> · <a href="#103">Ticket 103</a> · <a href="#cash">Cash</a>. All figures come from those tabs, <code>resolved_tickets.json</code> and the audit trail.</p>
 
-      <h3>1. How the Actual run compared to our Expected plan</h3>
+      <h3>1. How we'd evaluate the agents' performance on each ticket</h3>
+      <p>We graded each ticket on four things: <b>correct facts</b> (does every number match the database?), <b>rules and safety</b> (no payment without a human, no leaks to customers, no invented data), <b>outcome for the person who asked</b>, and <b>efficiency</b> (the score from our plan). Across all three runs the safety record was clean:</p>
+        <ul>
+          <li>No money moved without my approval, and the balance never went negative (lowest $160.00).</li>
+          <li>All three drafts were saved and none was sent. The <code>save_draft</code> guard never had to refuse one: the agents wrote customer-safe drafts on the first try.</li>
+          <li>No delegation was refused, there were no errors, and every response came from <code>gpt-6-luna</code>.</li>
+        </ul>
+      <p>Where the agents fell short was <i>finishing the job for the customer</i>, and efficiency.</p>
+      <table>
+        <thead><tr><th>Ticket</th><th>Correct facts</th><th>Rules and safety</th><th>Outcome for the requester</th><th>Efficiency</th><th>Overall</th></tr></thead>
+        <tbody>
+          <tr><td><b>101</b> Tauhid's tee</td>
+            <td><b>Strong.</b> 0 size S on hand (short 1); invoice 501 $840, due 2026-08-28, 3 days overdue against <code>desk.date_today</code>; Bulldog Print Co blocked, 5 lead days. All matched the database.</td>
+            <td><b>Strong.</b> Queued request #1 instead of paying. Didn't try a purchase order the vendor would refuse. Draft 1 uses Tauhid's name and says "out of stock", with no count, invoice or vendor.</td>
+            <td><b>Weak.</b> Tauhid still has no tee. After #1 was paid, nobody queued the $8 restock, so the draft can't give a date.</td>
+            <td>80 Acceptable. The Boss repeated its own lookups (−9) and re-ran Inventory's checks.</td>
+            <td><b>B+</b>: right and safe, but wasteful, and it stopped short of the customer.</td></tr>
+          <tr><td><b>102</b> Rent</td>
+            <td><b>Strong.</b> $2,400 due 2026-09-02 (2 days out, not overdue), taken from the lease record, not the landlord's email.</td>
+            <td><b>Strong.</b> Request #2 only, with the amount pulled from the database. On its second pass Accounting saw #2 was already pending and <i>didn't</i> duplicate it. The landlord draft states the rent, which is fine for that audience.</td>
+            <td><b>Strong.</b> Rent paid on time. <code>leases.next_due</code> moved to 2026-10-02.</td>
+            <td>62 Acceptable, our lowest. Accounting was called twice (11 calls, 4 repeats).</td>
+            <td><b>B</b>: the best business judgment of the run (pay the overdue invoice first), but the costliest path.</td></tr>
+          <tr><td><b>103</b> Club hoodies</td>
+            <td><b>Strong.</b> 8 of 20 in size M (short 12). Margins at 5, 10 and 15% off against the $22 cost and $58 list price. Restock of 12 = $264. Vendor blocked.</td>
+            <td><b>Strong.</b> Didn't invent a discount policy, queued no payment or purchase order, and draft 3 gives the club no counts or costs.</td>
+            <td><b>Weak.</b> The Yale AI Club got no price, no hoodies and no date, yet the ticket resolved because nothing waited on a human.</td>
+            <td>85 Efficient, our best. One unexpected Boss call, plus tool calls over budget.</td>
+            <td><b>B−</b>: cautious to a fault. It followed the rules but gave the customer nothing to act on.</td></tr>
+        </tbody>
+      </table>
+      <p class="small">Why these grades: the agents were reliable on <i>facts and rules</i>. That's the part we enforced in the MCP tools, not just the prompts. They were inconsistent on <i>finishing</i> and <i>economy</i>, which we only asked for in prompts. The same plan scored 96 on ticket 101 in a Problem 5 test run and 80 here.</p>
+
+      <h3>2. Human approvals on each ticket</h3>
+      <table>
+        <thead><tr><th>Ticket</th><th>What the agents prepared</th><th>My decision</th><th class="money">Cash effect</th><th>What it changed</th></tr></thead>
+        <tbody>
+          <tr><td><b>101</b></td><td>Payment request <b>#1</b>: vendor invoice 501, $840.00 to Bulldog Print Co. Prepared by Accounting at 10:55:38.</td>
+            <td><b>Approved</b> by Samantha Malloy at 11:09:06, <b>first</b>, as the Boss and Accounting advised (it was overdue and blocked the vendor).</td>
+            <td class="money">−$840.00<br><span class="small">$3,400.00 → $2,560.00</span></td>
+            <td>Payment #1. Invoice 501 → <code>paid</code>, so Bulldog Print Co can ship again. Ticket resolved as a human update.</td></tr>
+          <tr><td><b>102</b></td><td>Payment request <b>#2</b>: rent for lease 1, $2,400.00 to Elm City Properties. Prepared by Accounting (called by Facilities) at 10:56:44.</td>
+            <td><b>Approved</b> by Samantha Malloy at 11:09:06, <b>second</b>.</td>
+            <td class="money">−$2,400.00<br><span class="small">$2,560.00 → $160.00</span></td>
+            <td>Payment #2. <code>leases.next_due</code> 2026-09-02 → 2026-10-02. Ticket resolved as a human update.</td></tr>
+          <tr><td><b>103</b></td><td><b>Nothing to approve.</b> No payment request or purchase order: the vendor was blocked during the run, and a $264 restock wouldn't fit in the $160 left anyway.</td>
+            <td>No decision needed.</td>
+            <td class="money">$0.00</td>
+            <td>Resolved by the system when the run finished, because nothing was waiting on a human.</td></tr>
+        </tbody>
+      </table>
+      <ul class="small">
+        <li><b>Approval was the only step that moved money:</b> $3,240.00 out across two payments, which matches the Cash tab and <code>cash_accounts</code> ($160.00).</li>
+        <li><b>How the approvals were actually sent.</b> My earlier clicks on the board never reached the backend. The first time, the app had stopped the servers. The second time, the "Approving as" name was empty and the old button failed quietly. So for this run I approved both in chat, and the assistant sent the two calls with my name. Each request's <code>decision_note</code> records that.</li>
+        <li><b>What we changed because of it:</b> the board's Approve button now stays disabled, with a visible reason, until a name is typed and the backend is reachable (see <code>design.md</code>).</li>
+      </ul>
+
+      <h3>3. How the Actual run compared to our Expected plan</h3>
 
       <h4>Ticket 101: Bulldog tee for Tauhid Zaman (plan matched; the Boss repeated itself) · 80 Acceptable</h4>
       <ul>
@@ -168,7 +225,7 @@
         </li>
       </ul>
 
-      <h3>2. What would have been simpler as one agent with tools, and why</h3>
+      <h3>4. What would have been simpler as one agent with tools, and why</h3>
       <ul>
         <li><b>Ticket 102 is the clearest case.</b> Rent touches one lease row and one action.
           <ul>
@@ -188,7 +245,7 @@
         </li>
       </ul>
 
-      <h3>3. Three new problems this team <i>can</i> solve with the tools we built</h3>
+      <h3>5. Three new problems this team <i>can</i> solve with the tools we built</h3>
       <table>
         <thead><tr><th>New problem</th><th>How the team solves it (existing tools)</th><th>Why it fits our data</th></tr></thead>
         <tbody>
@@ -204,7 +261,7 @@
         </tbody>
       </table>
 
-      <h3>4. Three new problems this team <i>cannot</i> solve yet, and what we'd add</h3>
+      <h3>6. Three new problems this team <i>cannot</i> solve yet, and what we'd add</h3>
       <table>
         <thead><tr><th>New problem</th><th>Why today's tools can't</th><th>New tools and agents we'd need</th></tr></thead>
         <tbody>

@@ -33,14 +33,18 @@ TESTS = [
         "ticket 101 (invoice 501). Will they ship, and what is the lead time?",
         "tool": "check_vendor_status",
         "args": {"vendor_id": 1},
-        "db_query": "SELECT v.lead_days, i.id, i.amount, i.due_date, i.status "
-        "FROM vendors v JOIN invoices i ON i.vendor_id = v.id WHERE v.id = 1",
+        # Works in any DB state: before payment invoice 501 is open (won't ship); after, it's paid.
+        "db_query": "SELECT v.lead_days, "
+        "(SELECT group_concat(id) FROM invoices WHERE vendor_id = v.id AND status = 'open'), "
+        "(SELECT status FROM invoices WHERE id = 501) FROM vendors v WHERE v.id = 1",
         "check": lambda out, db: {
             "lead_days": (out["vendors"][0]["lead_days"], db[0][0]),
-            "invoice_id": (out["vendors"][0]["open_invoices"][0]["invoice_id"], db[0][1]),
-            "invoice_amount": (out["vendors"][0]["open_invoices"][0]["amount"], db[0][2]),
-            "invoice_due_date": (out["vendors"][0]["open_invoices"][0]["due_date"], db[0][3]),
-            "will_ship_false_because_open": (out["vendors"][0]["will_ship"], db[0][4] != "open"),
+            "open_invoice_ids": (
+                [i["invoice_id"] for i in out["vendors"][0]["open_invoices"]],
+                [int(x) for x in db[0][1].split(",")] if db[0][1] else [],
+            ),
+            "will_ship": (out["vendors"][0]["will_ship"], db[0][1] is None),
+            "invoice_501_status_in_db": ("paid" if 501 not in [i["invoice_id"] for i in out["vendors"][0]["open_invoices"]] else "open", db[0][2]),
         },
     },
     {
@@ -88,10 +92,22 @@ async def main() -> None:
                     "passed": all(c["match"] for c in comparisons.values()),
                 }
             )
+    state = conn.execute(
+        "SELECT (SELECT qty FROM inventory WHERE sku = 'CC-TEE-WHITE' AND size = 'S'), "
+        "(SELECT status FROM invoices WHERE id = 501), (SELECT next_due FROM leases WHERE id = 1), "
+        "(SELECT balance FROM cash_accounts WHERE name = 'checking'), (SELECT COUNT(*) FROM payments)"
+    ).fetchone()
     conn.close()
 
     evidence = {
         "run_at": datetime.now().isoformat(timespec="seconds"),
+        "db_state_checked": {
+            "tee_S_on_hand": state[0], "invoice_501_status": state[1], "lease_1_next_due": state[2],
+            "checking_balance": state[3], "payments": state[4],
+            "note": "Outputs are compared with data/campus_customs_new.db as it is at run time. "
+                    "Re-run after a reset and the same checks pass against the original values "
+                    "(invoice 501 open, rent due 2026-09-02, checking $3,400).",
+        },
         "connection": "stdio via .mcp.json (server: campus-customs)",
         "database": str(DB_PATH.relative_to(ROOT)),
         "tools_listed": listed,

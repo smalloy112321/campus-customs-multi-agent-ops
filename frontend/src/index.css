@@ -200,6 +200,8 @@ button { font: inherit; }
 .field-label { font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 700; color: var(--muted); }
 .field { border: 1px solid #d8c9a0; border-radius: 8px; padding: 9px 12px; font: inherit; background: #fff; }
 .approval-buttons { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+.approval-hint { margin: 4px 0 0; font-size: 0.82rem; font-weight: 700; color: var(--gold-ink); }
+.approval-hint.offline { color: var(--bad); }
 
 /* Panels */
 .ws-grid { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 16px; align-items: start; }

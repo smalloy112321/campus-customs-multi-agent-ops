@@ -81,6 +81,7 @@ export default function App() {
               approver={approver}
               onApproverChange={setApprover}
               onChanged={refresh}
+              offline={!!error}
             />
           ) : (
             <div className="empty-state">{loaded ? 'No tickets on the board.' : 'Loading the board…'}</div>
